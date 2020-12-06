@@ -70,19 +70,27 @@ model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
 ## biaxial model
   
-from keras.models import Sequential
-from keras.layers.core import Dense, Activation, Dropout
-from keras.layers.recurrent import LSTM
-from keras.callbacks import Callback
+inputs = tf.keras.Input(shape=(128,78,80))
 
-model=Sequential()
-model.add(LSTM(512,  return_sequences=True, stateful=True,
-                     batch_input_shape=(10, 128, 78)))
-model.add(Dropout(0.2))
-model.add(LSTM(512,  return_sequences=False))
-model.add(Dense(78))
-model.add(Activation('sigmoid'))
-model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+inputs_rotate= tf.keras.backend.permute_dimensions(inputs,(0,2,1,3)) #(78,128,80)
+
+time_lstm1 = tf.keras.layers.LSTM(80,return_sequences=True)
+time_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
+
+inter1 = tf.keras.layers.TimeDistributed(time_lstm1)(inputs_rotate) #(78,128,80)
+inter2 = tf.keras.layers.TimeDistributed(time_lstm2)(inter1) #(78,128,80)
+
+note_lstm1 = tf.keras.layers.LSTM(3,return_sequences=True)
+note_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
+
+inter2_rotate= tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(128,78,80)
+
+inter3 = tf.keras.layers.TimeDistributed(note_lstm1)(inter2_rotate)
+inter4 = tf.keras.layers.TimeDistributed(note_lstm2)(inter3)
+
+outputs = tf.keras.layers.Dense(2)(inter4)
+
+model=tf.keras.Model(inputs=inputs,outputs=outputs)
 
 def predict_next_step:
     '''
