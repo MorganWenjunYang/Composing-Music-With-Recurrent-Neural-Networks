@@ -56,16 +56,50 @@ import tensorflow as tf
 # =============================================================================
 
 ## time axis only
-inputs = tf.keras.Input(shape=(78,80))
-t1 = tf.keras.layers.LSTM(78)(inputs)
-t2 = tf.keras.layers.LSTM(78)(t1)
-p1 = tf.keras.layers.LSTM(78)(t2)
-p2 = tf.keras.layers.LSTM(78)(p1)
-outputs = tf.keras.layers.Dense(5, activation=tf.nn.softmax)(p2)
-model = tf.keras.Model(inputs=inputs, outputs=outputs)
+inputs = tf.keras.Input(shape=(128,78,80))
+
+inputs_rotate= tf.keras.backend.permute_dimensions(inputs,(0,2,1,3)) #(78,128,80)
+
+time_lstm1 = tf.keras.layers.LSTM(80,return_sequences=True)
+time_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
+
+inter1 = tf.keras.layers.TimeDistributed(time_lstm1)(inputs_rotate) #(78,128,80)
+inter2 = tf.keras.layers.TimeDistributed(time_lstm2)(inter1) #(78,128,80)
+
+inter2_rotate= tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(128,78,80)
+outputs = tf.keras.layers.Dense(2)(inter2)
+
+time_model=tf.keras.Model(inputs=inputs,outputs=outputs)
+
+
 
 
 ## note axis only
+
+inputs = tf.keras.Input(shape=(128,78,80))
+
+inputs_rotate= tf.keras.backend.permute_dimensions(inputs,(0,2,1,3)) #(78,128,80)
+
+time_lstm1 = tf.keras.layers.LSTM(80,return_sequences=True)
+time_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
+
+inter1 = tf.keras.layers.TimeDistributed(time_lstm1)(inputs_rotate) #(78,128,80)
+inter2 = tf.keras.layers.TimeDistributed(time_lstm2)(inter1) #(78,128,80)
+
+note_lstm1 = tf.keras.layers.LSTM(3,return_sequences=True)
+note_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
+
+inter2_rotate= tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(128,78,80)
+
+inter3 = tf.keras.layers.TimeDistributed(note_lstm1)(inter2_rotate)
+inter4 = tf.keras.layers.TimeDistributed(note_lstm2)(inter3)
+
+outputs = tf.keras.layers.Dense(2)(inter4)
+
+model=tf.keras.Model(inputs=inputs,outputs=outputs)
+
+
+
 
 
 ## biaxial model
@@ -97,4 +131,8 @@ def predict_next_step:
     predict the note in next timestep
     
     '''
+    
+    
+    
+    
     pass

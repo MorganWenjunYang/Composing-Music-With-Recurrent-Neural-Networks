@@ -24,7 +24,7 @@ import pickle
 # # part_position(1) = note
 # # pitchclass = 1 of 12 half steps CDEFGAB b#
 # # part_pitchclass(12): one-hot pitchclass 
-# # state: (1,0) (1,1) (0,0) -> denoting holding or repeating a note
+# # state: (1,0) (1,1) (0,0) -> denoting holding or repeating a note/ play or articulate
 # # context: the count of each pitchclass played in last timestep 
 # # part_context(12): rearranged context
 # # part_prev_vicinity(50):
@@ -63,9 +63,9 @@ def midi_to_statematrix(midifile):
     
     for the state indicator (whether it's played last timestep, whether it's articulated last timestep)
     
-    (1,1) (1,0) the note was played last timestep and will be holded this timestep
+    (1,1)  the note was played last timestep and is articulated in last timestep
     
-    (1,1) (1,1) the note was played last timestep and we play it agian this timestep  
+    (1,0)  the note was played last timestep but is not articalated in last timestep 
     
     (0,0): the note wasn't played last timestep 
     
@@ -158,49 +158,89 @@ def midi_to_statematrix(midifile):
 
 def statematrix_to_midi(statematrix,name='example'):
     '''
-    reverse of function midi_to_statematrix
+    reverse of function midi_to_statematrixtime
     
     convert stateMatrix to midi format and write to midi file
     
+    Note: 
+    1) we will only have one track when we convert it back
+    2) we discard the velocity and the tempo info, because we set them to be constant
+    
     '''
     statematrix = np.asarray(statematrix)
-    pattern = midi.Pattern()
+    
     track = midi.Track()
+    
+    note_span=upper_bound-lower_bound
+    tick_per_time = 55 
+    # because in statematrix_to_midi we have global_time % (TPQN/4) == (TPQN/8)
+    # TPQN in this set is generally 480, and the default TQPN by midi package is 220
+    # in this case 220/4=55
+    
+    # we need one container for the state in last timestep
+    # and initialize it as all zero
+    
+    base_time=0 # denote the start time
+    
+    last=[[0,0] for i in range(note_span)]
+    
+    for time, cur_state in enumerate(statematrix):
+#         for note in range(note_span):
+#             n = cur_state[note]
+#             p = last[note]
+#             if p[0] == 1:
+#                 if n[0] == 0:
+#                     track.append(midi.NoteOffEvent(tick=(time-base_time)*tick_per_time,velocity=0,pitch=lower_bound+note))
+#                 elif n[1] == 1:
+#                     track.append(midi.NoteOffEvent(tick=(time-base_time)*tick_per_time,velocity=0,pitch=lower_bound+note))
+#                     track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=60,pitch=lower_bound+note)) 
+#             elif n[0] == 1:
+#                 track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=60,pitch=lower_bound+note)) 
+
+
+        for note in range(note_span):
+            
+#             Last: [previous state played, previous state articulated]
+#             Cur_state: [current state played, current state articulated]
+#             play: whether the note is on
+#             articulate: where the note is made
+            
+#             Condition 1: [0,x] [1,x] new note on
+#             Condition 2: [1,x] [0,x] previous note off
+#             Condition 3: [1,x] [1,1] new note on and previous note off   
+                
+            # Condition 2
+            if last[note][0]==1 and cur_state[note][0]==0:
+                    
+                track.append(midi.NoteOffEvent(tick=(time-base_time)*tick_per_time,pitch=lower_bound+note))
+                base_time=time
+            
+            # Condition 3
+            elif cur_state[note][0]==1 and cur_state[note][1]==1 and last[note][0]==1:
+
+                track.append(midi.NoteOffEvent(tick=(time-base_time)*tick_per_time,velocity=0,pitch=lower_bound+note))
+                track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=60,pitch=lower_bound+note)) 
+                base_time=time
+                
+            # Condition 1    
+            elif cur_state[note][0]==1 and last[note][0]==0 :
+                
+                track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=60,pitch=lower_bound+note)) 
+                base_time=time
+                # the model in paper does not include velocity factor, so we just hand-pick one for every note
+          
+        last=cur_state
+        
+        # the end
+    track.append(midi.EndOfTrackEvent(tick=10))
+    
+    pattern = midi.Pattern()
+    
     pattern.append(track)
     
-    span = upperBound-lowerBound
-    tickscale = 55
-    
-    lastcmdtime = 0
-    prevstate = [[0,0] for x in range(span)]
-    for time, state in enumerate(statematrix + [prevstate[:]]):  
-        offNotes = []
-        onNotes = []
-        for i in range(span):
-            n = state[i]
-            p = prevstate[i]
-            if p[0] == 1:
-                if n[0] == 0:
-                    offNotes.append(i)
-                elif n[1] == 1:
-                    offNotes.append(i)
-                    onNotes.append(i)
-            elif n[0] == 1:
-                onNotes.append(i)
-        for note in offNotes:
-            track.append(midi.NoteOffEvent(tick=(time-lastcmdtime)*tickscale, pitch=note+lowerBound))
-            lastcmdtime = time
-        for note in onNotes:
-            track.append(midi.NoteOnEvent(tick=(time-lastcmdtime)*tickscale, velocity=40, pitch=note+lowerBound))
-            lastcmdtime = time
-            
-        prevstate = state
-    
-    eot = midi.EndOfTrackEvent(tick=1)
-    track.append(eot)
-
     midi.write_midifile("{}.mid".format(name), pattern)
-
+    
+    return pattern
 
 def get_part_position(note):
     

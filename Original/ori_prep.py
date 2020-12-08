@@ -85,7 +85,7 @@ def noteStateMatrixToMidi(statematrix, name="example"):
     
     lastcmdtime = 0
     prevstate = [[0,0] for x in range(span)]
-    for time, state in enumerate(statematrix + [prevstate[:]]):  
+    for time, state in enumerate(statematrix):  
         offNotes = []
         onNotes = []
         for i in range(span):
@@ -112,3 +112,5 @@ def noteStateMatrixToMidi(statematrix, name="example"):
     track.append(eot)
 
     midi.write_midifile("{}.mid".format(name), pattern)
+    
+    return pattern
