@@ -185,18 +185,6 @@ def statematrix_to_midi(statematrix,name='example'):
     last=[[0,0] for i in range(note_span)]
     
     for time, cur_state in enumerate(statematrix):
-#         for note in range(note_span):
-#             n = cur_state[note]
-#             p = last[note]
-#             if p[0] == 1:
-#                 if n[0] == 0:
-#                     track.append(midi.NoteOffEvent(tick=(time-base_time)*tick_per_time,velocity=0,pitch=lower_bound+note))
-#                 elif n[1] == 1:
-#                     track.append(midi.NoteOffEvent(tick=(time-base_time)*tick_per_time,velocity=0,pitch=lower_bound+note))
-#                     track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=60,pitch=lower_bound+note)) 
-#             elif n[0] == 1:
-#                 track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=60,pitch=lower_bound+note)) 
-
 
         for note in range(note_span):
             

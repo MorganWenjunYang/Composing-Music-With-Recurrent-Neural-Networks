@@ -108,25 +108,40 @@ inputs = tf.keras.Input(shape=(128,78,80))
 
 inputs_rotate= tf.keras.backend.permute_dimensions(inputs,(0,2,1,3)) #(78,128,80)
 
-time_lstm1 = tf.keras.layers.LSTM(80,return_sequences=True)
-time_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
+time_lstm1 = tf.keras.layers.LSTM(80,return_sequences=True,dropout=0.5)
+time_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True,dropout=0.5)
 
 inter1 = tf.keras.layers.TimeDistributed(time_lstm1)(inputs_rotate) #(78,128,80)
 inter2 = tf.keras.layers.TimeDistributed(time_lstm2)(inter1) #(78,128,80)
 
-note_lstm1 = tf.keras.layers.LSTM(3,return_sequences=True)
-note_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
+note_lstm1 = tf.keras.layers.LSTM(3,return_sequences=True,dropout=0.5)
+note_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True,dropout=0.5)
 
 inter2_rotate= tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(128,78,80)
 
 inter3 = tf.keras.layers.TimeDistributed(note_lstm1)(inter2_rotate)
 inter4 = tf.keras.layers.TimeDistributed(note_lstm2)(inter3)
 
-outputs = tf.keras.layers.Dense(2)(inter4)
+outputs = tf.keras.layers.Dense(2,activation='sigmoid')(inter4)
 
-model=tf.keras.Model(inputs=inputs,outputs=outputs)
+my_model=tf.keras.Model(inputs=inputs,outputs=outputs)
 
-def predict_next_step:
+
+# custom loss function
+# the output of model is the same shape with the sample's state matrix
+# that is (time,note(78),state(2))
+# the 2 for each time and note denote the probability of the note being played or articulated repectively in the last step
+# we use the negative log likelihood to denote the loss, the log function can avoid the numbers being too small
+
+def my_loss(y_true, y_pred):
+#     y_pred=np.asarray(y_pred)
+#     y_true=np.asarray(y_true)
+    loss=-tf.keras.backend.sum(tf.math.log(y_pred*y_true+(1-y_pred)*(1-y_true)))
+    return loss
+
+
+
+def predict_next_step():
     '''
     predict the note in next timestep
     

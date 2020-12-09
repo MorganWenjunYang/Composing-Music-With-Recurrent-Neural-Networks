@@ -92,7 +92,7 @@ class Model(object):
         self.p_layer_sizes = p_layer_sizes # [100,50]
 
         # From our architecture definition, size of the notewise input
-        self.t_input_size = 80 
+        self.t_input_size = 80 ################## important
         
         # time network maps from notewise input size to various hidden sizes
         self.time_model = StackedCells( self.t_input_size, celltype=LSTM, layers = t_layer_sizes)
@@ -100,7 +100,7 @@ class Model(object):
         
         # pitch network takes last layer of time model and state of last note, moving upward
         # and eventually ends with a two-element sigmoid layer
-        p_input_size = t_layer_sizes[-1] + 2
+        p_input_size = t_layer_sizes[-1] + 2 ################### important
         self.pitch_model = StackedCells( p_input_size, celltype=LSTM, layers = p_layer_sizes)
         self.pitch_model.layers.append(Layer(p_layer_sizes[-1], 2, activation = T.nnet.sigmoid))
         
@@ -122,7 +122,7 @@ class Model(object):
         ntimeparams = len(self.time_model.params)
         self.time_model.params = param_list[:ntimeparams]
         self.pitch_model.params = param_list[ntimeparams:]
-
+#########################################
     @property
     def learned_config(self):
         return [self.time_model.params, self.pitch_model.params, [l.initial_hidden_state for mod in (self.time_model, self.pitch_model) for l in mod.layers if has_hidden(l)]]
@@ -133,7 +133,7 @@ class Model(object):
         self.pitch_model.params = learned_list[1]
         for l, val in zip((l for mod in (self.time_model, self.pitch_model) for l in mod.layers if has_hidden(l)), learned_list[2]):
             l.initial_hidden_state.set_value(val.get_value())
-    
+#########################################    
     def setup_train(self):
 
         # dimensions: (batch, time, notes, input_data) with input_data as in architecture
@@ -186,6 +186,7 @@ class Model(object):
         last_layer = get_last_layer(time_result)
         n_hidden = last_layer.shape[2]
         time_final = get_last_layer(time_result).reshape((n_time,n_batch,n_note,n_hidden)).transpose((2,1,0,3)).reshape((n_note,n_batch*n_time,n_hidden))
+        ###################### note: 3 hidden elements
         
         # note_choices_inputs represents the last chosen note. Starts with [0,0], doesn't include last note.
         # In (note, batch/time, 2) format
@@ -231,7 +232,7 @@ class Model(object):
         loglikelihoods = mask * T.log( 2*note_final*self.output_mat[:,1:] - note_final - self.output_mat[:,1:] + 1 + self.epsilon )
         self.cost = T.neg(T.sum(loglikelihoods))
         
-        updates, _, _, _, _ = create_optimization_updates(self.cost, self.params, method="adadelta")
+        updates, _, _, _, _ = create_optimization_updates(self.cost, self.params, method="adadelta") ##############
         self.update_fun = theano.function(
             inputs=[self.input_mat, self.output_mat],
             outputs=self.cost,
