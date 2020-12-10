@@ -187,7 +187,7 @@ class Model(object):
         n_hidden = last_layer.shape[2]
         time_final = get_last_layer(time_result).reshape((n_time,n_batch,n_note,n_hidden)).transpose((2,1,0,3)).reshape((n_note,n_batch*n_time,n_hidden))
         ###################### note: 3 hidden elements
-        
+        ######################
         # note_choices_inputs represents the last chosen note. Starts with [0,0], doesn't include last note.
         # In (note, batch/time, 2) format
         # Shape of start is thus (1, N, 2), concatenated with all but last element of output_mat transformed to (x, N, 2)
@@ -199,7 +199,7 @@ class Model(object):
         # one direction are the steps in the other, and vice versa.
         note_inputs = T.concatenate( [time_final, note_choices_inputs], axis=2 )
         num_timebatch = note_inputs.shape[1]
-        
+###########################################################################################        
         # apply dropout
         if self.dropout > 0:
             pitch_masks = theano_lstm.MultiDropout( [(num_timebatch, shape) for shape in self.p_layer_sizes], self.dropout)
@@ -243,7 +243,7 @@ class Model(object):
             inputs=[self.input_mat, self.output_mat],
             outputs= ensure_list(self.time_thoughts) + ensure_list(self.note_thoughts) + [self.cost],
             allow_input_downcast=True)
-    
+######################################################################################    
     def _predict_step_note(self, in_data_from_time, *states):
         # States is [ *hiddens, last_note_choice ]
         hiddens = list(states[:-1])

@@ -56,47 +56,37 @@ import tensorflow as tf
 # =============================================================================
 
 ## time axis only
-inputs = tf.keras.Input(shape=(128,78,80))
+t_inputs = tf.keras.Input(shape=(128,78,80))
 
-inputs_rotate= tf.keras.backend.permute_dimensions(inputs,(0,2,1,3)) #(78,128,80)
+t_inputs_rotate= tf.keras.backend.permute_dimensions(t_inputs,(0,2,1,3)) #(78,128,80)
 
-time_lstm1 = tf.keras.layers.LSTM(80,return_sequences=True)
-time_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
+t_time_lstm1 = tf.keras.layers.LSTM(300,return_sequences=True)
+t_time_lstm2 = tf.keras.layers.LSTM(300,return_sequences=True)
 
-inter1 = tf.keras.layers.TimeDistributed(time_lstm1)(inputs_rotate) #(78,128,80)
-inter2 = tf.keras.layers.TimeDistributed(time_lstm2)(inter1) #(78,128,80)
+t_inter1 = tf.keras.layers.TimeDistributed(t_time_lstm1)(t_inputs_rotate) #(78,128,80)
+t_inter2 = tf.keras.layers.TimeDistributed(t_time_lstm2)(t_inter1) #(78,128,80)
 
-inter2_rotate= tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(128,78,80)
-outputs = tf.keras.layers.Dense(2)(inter2)
+t_inter2_rotate= tf.keras.backend.permute_dimensions(t_inter2,(0,2,1,3)) #(128,78,80)
+t_outputs = tf.keras.layers.Dense(2)(t_inter2_rotate) #(128,78,2)
 
-time_model=tf.keras.Model(inputs=inputs,outputs=outputs)
+time_model=tf.keras.Model(inputs=t_inputs,outputs=t_outputs)
 
 
 
 
 ## note axis only
 
-inputs = tf.keras.Input(shape=(128,78,80))
+n_inputs = tf.keras.Input(shape=(128,78,80))
 
-inputs_rotate= tf.keras.backend.permute_dimensions(inputs,(0,2,1,3)) #(78,128,80)
+n_note_lstm1 = tf.keras.layers.LSTM(100,return_sequences=True)
+n_note_lstm2 = tf.keras.layers.LSTM(50,return_sequences=True)
 
-time_lstm1 = tf.keras.layers.LSTM(80,return_sequences=True)
-time_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
+n_inter3 = tf.keras.layers.TimeDistributed(n_note_lstm1)(n_inputs)
+n_inter4 = tf.keras.layers.TimeDistributed(n_note_lstm2)(n_inter3)
 
-inter1 = tf.keras.layers.TimeDistributed(time_lstm1)(inputs_rotate) #(78,128,80)
-inter2 = tf.keras.layers.TimeDistributed(time_lstm2)(inter1) #(78,128,80)
+n_outputs = tf.keras.layers.Dense(2)(n_inter4)
 
-note_lstm1 = tf.keras.layers.LSTM(3,return_sequences=True)
-note_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True)
-
-inter2_rotate= tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(128,78,80)
-
-inter3 = tf.keras.layers.TimeDistributed(note_lstm1)(inter2_rotate)
-inter4 = tf.keras.layers.TimeDistributed(note_lstm2)(inter3)
-
-outputs = tf.keras.layers.Dense(2)(inter4)
-
-model=tf.keras.Model(inputs=inputs,outputs=outputs)
+note_model=tf.keras.Model(inputs=n_inputs,outputs=n_outputs)
 
 
 
@@ -106,25 +96,25 @@ model=tf.keras.Model(inputs=inputs,outputs=outputs)
   
 inputs = tf.keras.Input(shape=(128,78,80))
 
-inputs_rotate= tf.keras.backend.permute_dimensions(inputs,(0,2,1,3)) #(78,128,80)
+inputs_rotate= tf.keras.backend.permute_dimensions(inputs,(0,2,1,3)) #(batch,78,128,80)
 
-time_lstm1 = tf.keras.layers.LSTM(80,return_sequences=True,dropout=0.5)
-time_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True,dropout=0.5)
+time_lstm1 = tf.keras.layers.LSTM(300,return_sequences=True,dropout=0.5)
+time_lstm2 = tf.keras.layers.LSTM(300,return_sequences=True,dropout=0.5)
 
-inter1 = tf.keras.layers.TimeDistributed(time_lstm1)(inputs_rotate) #(78,128,80)
-inter2 = tf.keras.layers.TimeDistributed(time_lstm2)(inter1) #(78,128,80)
+inter1 = tf.keras.layers.TimeDistributed(time_lstm1)(inputs_rotate) #(batch,78,128,300)
+inter2 = tf.keras.layers.TimeDistributed(time_lstm2)(inter1) #(batch,78,128,300)
 
-note_lstm1 = tf.keras.layers.LSTM(3,return_sequences=True,dropout=0.5)
-note_lstm2 = tf.keras.layers.LSTM(3,return_sequences=True,dropout=0.5)
+note_lstm1 = tf.keras.layers.LSTM(100,return_sequences=True,dropout=0.5)
+note_lstm2 = tf.keras.layers.LSTM(50,return_sequences=True,dropout=0.5)
 
-inter2_rotate= tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(128,78,80)
+inter2_rotate= tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(batch,128,78,50)
 
 inter3 = tf.keras.layers.TimeDistributed(note_lstm1)(inter2_rotate)
 inter4 = tf.keras.layers.TimeDistributed(note_lstm2)(inter3)
 
-outputs = tf.keras.layers.Dense(2,activation='sigmoid')(inter4)
+outputs = tf.keras.layers.Dense(2,activation='sigmoid')(inter4) #（batch,128,78,2）
 
-my_model=tf.keras.Model(inputs=inputs,outputs=outputs)
+model=tf.keras.Model(inputs=inputs,outputs=outputs)
 
 
 # custom loss function
@@ -147,7 +137,13 @@ def predict_next_step():
     
     '''
     
+    pass
+
+def generate_music(feed,length_of_music):
     
+    '''
+    Generate the music of certain length at your command
     
+    '''
     
     pass
