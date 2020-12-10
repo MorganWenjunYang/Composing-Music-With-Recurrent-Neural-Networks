@@ -67,7 +67,7 @@ t_inter1 = tf.keras.layers.TimeDistributed(t_time_lstm1)(t_inputs_rotate) #(78,1
 t_inter2 = tf.keras.layers.TimeDistributed(t_time_lstm2)(t_inter1) #(78,128,80)
 
 t_inter2_rotate= tf.keras.backend.permute_dimensions(t_inter2,(0,2,1,3)) #(128,78,80)
-t_outputs = tf.keras.layers.Dense(2)(t_inter2_rotate) #(128,78,2)
+t_outputs = tf.keras.layers.Dense(2,activation='sigmoid')(t_inter2_rotate) #(128,78,2)
 
 time_model=tf.keras.Model(inputs=t_inputs,outputs=t_outputs)
 
@@ -84,7 +84,7 @@ n_note_lstm2 = tf.keras.layers.LSTM(50,return_sequences=True)
 n_inter3 = tf.keras.layers.TimeDistributed(n_note_lstm1)(n_inputs)
 n_inter4 = tf.keras.layers.TimeDistributed(n_note_lstm2)(n_inter3)
 
-n_outputs = tf.keras.layers.Dense(2)(n_inter4)
+n_outputs = tf.keras.layers.Dense(2,activation='sigmoid')(n_inter4)
 
 note_model=tf.keras.Model(inputs=n_inputs,outputs=n_outputs)
 
@@ -126,8 +126,9 @@ model=tf.keras.Model(inputs=inputs,outputs=outputs)
 def my_loss(y_true, y_pred):
 #     y_pred=np.asarray(y_pred)
 #     y_true=np.asarray(y_true)
-    loss=-tf.keras.backend.sum(tf.math.log(y_pred*y_true+(1-y_pred)*(1-y_true)))
+    loss=-tf.keras.backend.mean(tf.math.log(y_pred*y_true+(1-y_pred)*(1-y_true)))
     return loss
+
 
 
 
