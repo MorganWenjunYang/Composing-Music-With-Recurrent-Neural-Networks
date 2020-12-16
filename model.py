@@ -5,6 +5,8 @@ Created on Fri Dec  4 22:07:48 2020
 @author: YWJ97
 """
 import tensorflow as tf
+import numpy as np
+from prep import build_single_input, statematrix_to_midi, build_input_data
 
 # =============================================================================
 # In the section, we will build LSTM model according to the definition stated in 
@@ -55,66 +57,111 @@ import tensorflow as tf
 # just as feedforward layers are stacked in conventional deep networks.
 # =============================================================================
 
-## time axis only
-t_inputs = tf.keras.Input(shape=(128,78,80))
-
-t_inputs_rotate= tf.keras.backend.permute_dimensions(t_inputs,(0,2,1,3)) #(78,128,80)
-
-t_time_lstm1 = tf.keras.layers.LSTM(300,return_sequences=True)
-t_time_lstm2 = tf.keras.layers.LSTM(300,return_sequences=True)
-
-t_inter1 = tf.keras.layers.TimeDistributed(t_time_lstm1)(t_inputs_rotate) #(78,128,80)
-t_inter2 = tf.keras.layers.TimeDistributed(t_time_lstm2)(t_inter1) #(78,128,80)
-
-t_inter2_rotate= tf.keras.backend.permute_dimensions(t_inter2,(0,2,1,3)) #(128,78,80)
-t_outputs = tf.keras.layers.Dense(2,activation='sigmoid')(t_inter2_rotate) #(128,78,2)
-
-time_model=tf.keras.Model(inputs=t_inputs,outputs=t_outputs)
 
 
 
+class music_gen(tf.keras.Model):
+    
+    def __init__(self):
+        
+        super(music_gen, self).__init__()
+        
+        self.time_lstm1 = tf.keras.layers.LSTM(300,return_sequences=True,dropout=0.5)
+        self.time_lstm2 = tf.keras.layers.LSTM(300,return_sequences=True,dropout=0.5)
 
-## note axis only
+        self.inter1 = tf.keras.layers.TimeDistributed(self.time_lstm1) #(batch,77,127,300)
+        self.inter2 = tf.keras.layers.TimeDistributed(self.time_lstm2) #(batch,77,127,300)
+       
+        
+        # the input of note-axis part of model will be 
+        # 1) the note-state vector from previous LSTM stack (batch,127,78,300)
+        # 2) where the previous note was chosen to be played (batch,127,78,1)
+        # 3) where the previous note was chosen to be articulated (batch,127,78,1)
+        # that's why we are using padding here and concatenate the 3 together 
+        # please see https://www.tensorflow.org/api_docs/python/tf/pad 
+        # https://www.tensorflow.org/api_docs/python/tf/concat
+        # for reference
 
-n_inputs = tf.keras.Input(shape=(128,78,80))
+        self.note_lstm1 = tf.keras.layers.LSTM(100,return_sequences=True,dropout=0.5)
+        self.note_lstm2 = tf.keras.layers.LSTM(50,return_sequences=True,dropout=0.5)
 
-n_note_lstm1 = tf.keras.layers.LSTM(100,return_sequences=True)
-n_note_lstm2 = tf.keras.layers.LSTM(50,return_sequences=True)
+        self.inter3 = tf.keras.layers.TimeDistributed(self.note_lstm1) #(batch,127,78,100)
+        self.inter4 = tf.keras.layers.TimeDistributed(self.note_lstm2) #(batch,127,78,50)
 
-n_inter3 = tf.keras.layers.TimeDistributed(n_note_lstm1)(n_inputs)
-n_inter4 = tf.keras.layers.TimeDistributed(n_note_lstm2)(n_inter3)
+        self.outputs1 = tf.keras.layers.Flatten()
+        self.outputs2 = tf.keras.layers.Dropout(.5)
+        self.outputs3 = tf.keras.layers.Dense(156, activation='sigmoid') #（batch,127,78,2）
 
-n_outputs = tf.keras.layers.Dense(2,activation='sigmoid')(n_inter4)
+        # output the final result, i.e., probability of playing or articulating certain notes
+        self.outputs = tf.keras.layers.Reshape((78,2)) #（batch,78,2）
 
-note_model=tf.keras.Model(inputs=n_inputs,outputs=n_outputs)
+    
+    def call(self, inputs):
+        
+        
+        # For why use permute dimensions and use time distributed layers 
+        # please refer to https://keras.io/api/layers/recurrent_layers/time_distributed/
+        
+        inputs = tf.cast(inputs, tf.float32) #(batch, 127, 78, 82)
+        time_inputs = inputs[:, :, :, :80]
+        state_inputs = inputs[:, :, :, 81:]
+ 
+        inputs_rotate = tf.keras.backend.permute_dimensions(time_inputs,(0,2,1,3)) #(batch,78,127,80)
+        
+        inter1 = self.inter1(inputs_rotate)
+        inter2 = self.inter2(inter1)
+        
+        inter2_rotate = tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(batch,127,78,300)
+        
+        paddings = [[0,0],[0,0],[1,0],[0,0]]
+        prev_note_state = tf.pad(state_inputs[:,:,:-1,:], paddings, 'CONSTANT', constant_values=0)   # (batch,127,78,2)
+        
+        inter_input1 = tf.concat((inter2_rotate,prev_note_state),axis=-1) # (batch,127,78,302)
+        inter3 = self.inter3(inter_input1) 
+        
+        inter_input2 = tf.concat((inter3,prev_note_state),axis=-1) #(batch,127,78,102)
+        inter4 = self.inter4(inter_input2) 
+
+        outputs = self.outputs1(inter4)
+        outputs = self.outputs2(outputs)
+        outputs = self.outputs3(outputs)
+        outputs = self.outputs(outputs)
+        
+        return outputs
+    
+    # Music composition function
+    def compose(self, training_data, length, prob, name = "sample"):
+
+        starting_data = build_single_input(training_data) # Randomly select a starting data
+        new_input = tf.concat((np.asarray(starting_data[0][:-1]).reshape(1, 127, 78, 80),
+                        np.asarray(starting_data[1][:-1]).reshape(1, 127, 78, 2)), axis = -1) # (1, 127, 78, 82)
+
+        output_state = []
+
+        for _ in range(length):
+
+            pred_state = self.predict(new_input) # Predict statematrix (1, 78, 2)
+            
+            # Assign 1 when predicted probability > prob
+            for i in range(pred_state[0].shape[0]):
+                for j in range(pred_state[0].shape[1]):
+                    if pred_state[0][i][j] > prob:
+                        pred_state[0][i][j] = 1
+                    else:
+                        pred_state[0][i][j] = 0
 
 
+            output_state.append(pred_state[0])
 
+            # Combine pred_state to test_state
+            new_state = np.concatenate((np.asarray(new_input[0, 1:, :, -2:]).reshape(1, 126, 78, 2), 
+                                        np.asarray(pred_state).reshape(1, 1, 78, 2)), axis = 1) # (1, 127, 78, 2)
 
-
-## biaxial model
-  
-inputs = tf.keras.Input(shape=(128,78,80))
-
-inputs_rotate= tf.keras.backend.permute_dimensions(inputs,(0,2,1,3)) #(batch,78,128,80)
-
-time_lstm1 = tf.keras.layers.LSTM(300,return_sequences=True,dropout=0.5)
-time_lstm2 = tf.keras.layers.LSTM(300,return_sequences=True,dropout=0.5)
-
-inter1 = tf.keras.layers.TimeDistributed(time_lstm1)(inputs_rotate) #(batch,78,128,300)
-inter2 = tf.keras.layers.TimeDistributed(time_lstm2)(inter1) #(batch,78,128,300)
-
-note_lstm1 = tf.keras.layers.LSTM(100,return_sequences=True,dropout=0.5)
-note_lstm2 = tf.keras.layers.LSTM(50,return_sequences=True,dropout=0.5)
-
-inter2_rotate= tf.keras.backend.permute_dimensions(inter2,(0,2,1,3)) #(batch,128,78,50)
-
-inter3 = tf.keras.layers.TimeDistributed(note_lstm1)(inter2_rotate)
-inter4 = tf.keras.layers.TimeDistributed(note_lstm2)(inter3)
-
-outputs = tf.keras.layers.Dense(2,activation='sigmoid')(inter4) #（batch,128,78,2）
-
-model=tf.keras.Model(inputs=inputs,outputs=outputs)
+            new_data = np.asarray(build_input_data(new_state[0])).reshape(1, 127, 78, 80) # Starematrix -> Input_data (1, 127, 78, 80)
+            new_input = tf.concat([new_data, new_state], axis = -1) # (1, 127, 78, 82)
+        
+        sample = statematrix_to_midi(output_state, name = name)
+        return sample
 
 
 # custom loss function
@@ -126,25 +173,7 @@ model=tf.keras.Model(inputs=inputs,outputs=outputs)
 def my_loss(y_true, y_pred):
 #     y_pred=np.asarray(y_pred)
 #     y_true=np.asarray(y_true)
-    loss=-tf.keras.backend.mean(tf.math.log(y_pred*y_true+(1-y_pred)*(1-y_true)))
+    loss=-tf.keras.backend.sum(tf.math.log(y_pred*y_true+(1-y_pred)*(1-y_true)+np.spacing(np.float32(1.0)))) # numeric stablity
     return loss
 
 
-
-
-def predict_next_step():
-    '''
-    predict the note in next timestep
-    
-    '''
-    
-    pass
-
-def generate_music(feed,length_of_music):
-    
-    '''
-    Generate the music of certain length at your command
-    
-    '''
-    
-    pass

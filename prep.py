@@ -14,6 +14,7 @@ import midi
 import os, random
 import numpy as np
 import pickle
+import tensorflow as tf
 
 # =============================================================================
 # We will stick to the name convention in the original paper
@@ -207,13 +208,13 @@ def statematrix_to_midi(statematrix,name='example'):
             elif cur_state[note][0]==1 and cur_state[note][1]==1 and last[note][0]==1:
 
                 track.append(midi.NoteOffEvent(tick=(time-base_time)*tick_per_time,velocity=0,pitch=lower_bound+note))
-                track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=60,pitch=lower_bound+note)) 
+                track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=40,pitch=lower_bound+note)) 
                 base_time=time
                 
             # Condition 1    
             elif cur_state[note][0]==1 and last[note][0]==0 :
                 
-                track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=60,pitch=lower_bound+note)) 
+                track.append(midi.NoteOnEvent(tick=(time-base_time)*tick_per_time,velocity=40,pitch=lower_bound+note)) 
                 base_time=time
                 # the model in paper does not include velocity factor, so we just hand-pick one for every note
           
@@ -226,7 +227,9 @@ def statematrix_to_midi(statematrix,name='example'):
     
     pattern.append(track)
     
-    midi.write_midifile("{}.mid".format(name), pattern)
+    midi.write_midifile("samples/{}.mid".format(name), pattern)
+    
+    print("{}.mid saved".format(name))
     
     return pattern
 
@@ -382,7 +385,7 @@ def build_single_input(statemat_dict):
     # there is an interesting setting in original code
     # set a minimum interval to ensure our training sequences are relatively more different
     
-    target=whole_seq[rand_start_point:rand_start_point+len_of_seq]
+    target=whole_seq[rand_start_point:rand_start_point+len_of_seq] # Only need 127
     
     input_seq=build_input_data(target)
     
@@ -426,6 +429,18 @@ def input_batch_generator(statemat_dict):
         batch=build_input_batch(statemat_dict)
         yield (batch[0],batch[1])
     
+
+    
+### Generate (None, 127, 78, 82) training data
+def update_input_batch_generator(statemat_dict):
+    
+    # training data generator
+    
+    while True:
+        batch=build_input_batch(statemat_dict)
+        train = tf.concat([batch[0][:,:-1],batch[1][:,:-1]], axis = -1)
+        yield (train, batch[1][:,-1])
+        
 
 ###################################################################
 #                 Performance Model
