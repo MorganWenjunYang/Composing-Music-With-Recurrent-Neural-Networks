@@ -130,9 +130,9 @@ class music_gen(tf.keras.Model):
         return outputs
     
     # Music composition function
-    def compose(self, training_data, length, prob, name = "sample"):
+    def compose(self, starting_data, length, name = "sample"):
 
-        starting_data = build_single_input(training_data) # Randomly select a starting data
+        #starting_data = build_single_input(training_data) # Randomly select a starting data
         new_input = tf.concat((np.asarray(starting_data[0][:-1]).reshape(1, 127, 78, 80),
                         np.asarray(starting_data[1][:-1]).reshape(1, 127, 78, 2)), axis = -1) # (1, 127, 78, 82)
 
@@ -144,11 +144,15 @@ class music_gen(tf.keras.Model):
             
             # Assign 1 when predicted probability > prob
             for i in range(pred_state[0].shape[0]):
-                for j in range(pred_state[0].shape[1]):
-                    if pred_state[0][i][j] > prob:
-                        pred_state[0][i][j] = 1
-                    else:
-                        pred_state[0][i][j] = 0
+                prob = np.random.uniform(0, 1)
+                if pred_state[0][i][0] > prob:
+                    pred_state[0][i][0] = 1
+                else:
+                    pred_state[0][i][0] = 0
+                    
+                prob2 = np.random.uniform(0, 1)
+                pred_state[0][i][1] = pred_state[0][i][0] * (prob2 < pred_state[0][i][1])
+               
 
 
             output_state.append(pred_state[0])
