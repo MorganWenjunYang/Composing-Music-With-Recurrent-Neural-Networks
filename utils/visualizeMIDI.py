@@ -17,6 +17,15 @@ import matplotlib.pyplot as plt
 # mid= midi.read_midifile('E:/music/sample_prob.mid') 
 # seq=serialize_midi(mid)
 # df=sequence_to_df(seq)
+
+# =============================================================================
+# Reference: https://towardsdatascience.com/visualizing-musical-performance-5da28b96957a
+# our data visualization code is inspired by the link above
+# we improve the code for our tasks, enabling it to visualize midi data no matter
+# how many tracks the data has, and also make the code more concise and neat
+# =============================================================================
+
+
 def serialize_midi(mid):
     track=[]
      

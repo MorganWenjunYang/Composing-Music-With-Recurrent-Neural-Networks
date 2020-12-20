@@ -11,7 +11,7 @@ Our project aims at reconstructing the architecture of the Bi-axial LSTM model, 
 
 
 # How to see the result and better leverage our model
-To see a thorough workthrough of our project, please go to Report.ipynb where we provide detailed explaination of our idea, model and implementation. For the music we have generated, you can easily find them under samples directory.
+To see a thorough workthrough of our project, please go to **Report.ipynb** where we provide detailed explaination of our idea, model and implementation. For the music we have generated, you can easily find them under **samples** directory.
 
 Due to limitation of storage space of github, unfortunately, the model file can't be pushed into github, however you may find the saved model file in following link. You can build a model and load the weight, so that you can immediately generate music yourself.
 
@@ -23,9 +23,18 @@ https://drive.google.com/file/d/1SFWloQ0ukVv9Lr7ieN98HmfeFsEEWxJz/view?usp=shari
 Note: Download it and save it back to the folder specified above, then you can easily proceed to the next step. 
 We are opening view access to everyone with lionmail, if you have trouble downloading that, please feel free to contact us.
 
+# Directory Walk-through
+The main jupyter notebook is Report.ipynb. The pdf version of general report is named as E4040.2020Fall.MYEY.report.wy2347.qy2231.pdf.
+You can find the dataset we use under data folder and the samples we generate under samples folder.
+The functions we defined are under utils folder.
+* prep.py: contains all the function related to data preprocessing and postprocessing. For example, there we have functions that transform MIDI file to state matrix and tranform state matrix back to MIDI file, besides, there are input data generator and anything related to extract input data from state matrix.
+* model.py: where we define the architecture of our model along with the predict and compose function.
+* visualizeMIDI.py: everything that related to MIDI file visualization, from serializing a MIDI file, transforming the sequence into pandas dataframe and outputing figures.
+
 # Organization of this directory
 ```
 ./
+├── E4040.2020Fall.MYEY.report.wy2347.qy2231.pdf
 ├── README.md
 ├── Report.ipynb
 ├── data

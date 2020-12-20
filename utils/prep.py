@@ -55,6 +55,12 @@ upper_bound = 102 # the upper bound of note
 
 lower_bound = 24 # the lower bound of note
 
+# =============================================================================
+# Reference: https://github.com/danieldjohnson/biaxial-rnn-music-composition
+# part of our data preprocessing code is written based on our understanding 
+# of the implementation of the original author. we also provides extensive 
+# comments about the function of each of them
+# =============================================================================
 
 def midi_to_statematrix(midifile):
     '''
