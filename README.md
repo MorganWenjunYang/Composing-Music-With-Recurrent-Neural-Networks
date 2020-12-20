@@ -24,7 +24,7 @@ Note: Download it and save it back to the folder specified above, then you can e
 We are opening view access to everyone with lionmail, if you have trouble downloading that, please feel free to contact us.
 
 # Organization of this directory
-
+```
 ./
 ├── README.md
 ├── Report.ipynb
@@ -42,3 +42,4 @@ We are opening view access to everyone with lionmail, if you have trouble downlo
     ├── model.py
     ├── prep.py
     └── visualizeMIDI.py
+```
