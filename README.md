@@ -7,7 +7,7 @@ Wenjun Yang (wy2347) || Qihang Yang(qy2231)
 
 
 # Project Description:
-(Abstract)
+Our project aims at reconstructing the architecture of the Bi-axial LSTM model, and composing music based on the model. The code of the original paper is written in theano,  while we managed to understand the practical implementation and build our model in tensorflow and keras according to the description in the original paper. After epochs of training, we manage to have some satisfying results. Our music now has a sense of chords.
 
 
 # How to see the result and better leverage our model

@@ -227,7 +227,7 @@ def statematrix_to_midi(statematrix,name='example'):
     
     pattern.append(track)
     
-    midi.write_midifile("samples/{}.mid".format(name), pattern)
+    res = midi.write_midifile("samples/{}.mid".format(name), pattern)
     
     print("{}.mid saved".format(name))
     
